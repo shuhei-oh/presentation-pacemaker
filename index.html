@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プレゼン ペースメーカー</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Meiryo', system-ui, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== Setup Screen ===== */
+  .setup-screen {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 48px 40px;
+    max-width: 440px;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .setup-header { text-align: center; margin-bottom: 40px; }
+  .setup-header .icon { font-size: 40px; margin-bottom: 8px; }
+  .setup-header h1 { font-size: 26px; font-weight: 700; }
+  .setup-header p { color: #94a3b8; font-size: 14px; margin-top: 8px; }
+  .field { margin-bottom: 24px; }
+  .field label { color: #cbd5e1; font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px; }
+  .field input {
+    width: 100%; padding: 14px 16px; font-size: 22px; font-weight: 700;
+    border-radius: 12px; border: 2px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3); color: #f1f5f9; text-align: center; outline: none;
+  }
+  .field input:focus { border-color: rgba(99,102,241,0.5); }
+  .calc-box {
+    background: rgba(99,102,241,0.15); border-radius: 12px; padding: 16px 20px;
+    margin-bottom: 32px; border: 1px solid rgba(99,102,241,0.3);
+  }
+  .calc-box .label { color: #a5b4fc; font-size: 13px; margin-bottom: 4px; }
+  .calc-box .value { color: #e0e7ff; font-size: 28px; font-weight: 700; }
+  .btn-start {
+    width: 100%; padding: 16px; font-size: 18px; font-weight: 700;
+    border-radius: 14px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;
+    transition: transform 0.1s;
+  }
+  .btn-start:active { transform: scale(0.97); }
+  .btn-start:disabled { opacity: 0.4; cursor: default; }
+
+  /* ===== Timer Screen ===== */
+  .timer-screen {
+    width: 100%; height: 100vh;
+    display: flex; flex-direction: column;
+    transition: background 0.3s;
+    overflow: hidden;
+  }
+  .timer-screen.flash { background: rgba(99,102,241,0.12); }
+
+  /* Top: progress bar */
+  .progress-bar-top {
+    width: 100%; height: 6px; flex-shrink: 0;
+    background: rgba(255,255,255,0.05);
+  }
+  .progress-bar-top .fill {
+    height: 100%; background: linear-gradient(90deg, #6366f1, #a78bfa);
+    transition: width 1s linear; border-radius: 0 3px 3px 0;
+  }
+
+  /* Main area: page number + countdown stacked */
+  .timer-main {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 8px 16px; min-height: 0;
+  }
+  .page-display {
+    display: flex; align-items: baseline; justify-content: center;
+    line-height: 1;
+  }
+  .page-num {
+    font-weight: 800; transition: color 0.3s, text-shadow 0.3s;
+    color: #f1f5f9;
+  }
+  .page-num.flash-text { color: #a78bfa; text-shadow: 0 0 30px rgba(167,139,250,0.5); }
+  .page-label { color: #94a3b8; font-weight: 600; }
+  .page-total { color: #64748b; font-weight: 600; }
+
+  .countdown-wrap { text-align: center; }
+  .countdown-label { color: #94a3b8; }
+  .countdown {
+    font-weight: 700; font-variant-numeric: tabular-nums;
+    transition: color 0.3s; color: #e2e8f0;
+  }
+  .countdown.low { color: #f87171; }
+
+  .countdown-bar {
+    width: 80%; max-width: 500px; background: rgba(255,255,255,0.08);
+    border-radius: 5px; overflow: hidden;
+  }
+  .countdown-bar .fill {
+    height: 100%; border-radius: 5px;
+    background: linear-gradient(90deg, #6366f1, #a78bfa);
+    transition: width 1s linear, background 0.3s;
+  }
+  .countdown-bar .fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+  /* Bottom bar: info + controls */
+  .timer-bottom {
+    flex-shrink: 0; width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-wrap: wrap; gap: 8px;
+  }
+  .info-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .info-item { text-align: center; }
+  .info-item .lbl { color: #64748b; font-size: 11px; }
+  .info-item .val { color: #cbd5e1; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .controls { display: flex; gap: 8px; }
+  .btn-pause, .btn-stop {
+    padding: 8px 20px; font-size: 14px; font-weight: 700;
+    border-radius: 10px; cursor: pointer;
+  }
+  .btn-pause {
+    border: 2px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05); color: #e2e8f0;
+  }
+  .btn-pause.resumed { background: rgba(34,197,94,0.2); color: #86efac; }
+  .btn-stop {
+    border: 2px solid rgba(255,255,255,0.1);
+    background: rgba(239,68,68,0.15); color: #fca5a5;
+  }
+  .paused-overlay {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: #fbbf24; font-size: 24px; font-weight: 700;
+    animation: pulse 1.5s infinite; pointer-events: none;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ===== Done Screen ===== */
+  .done-screen { text-align: center; }
+  .done-screen .icon { font-size: 64px; margin-bottom: 16px; }
+  .done-screen h1 { font-size: 36px; margin-bottom: 12px; }
+  .done-screen p { color: #94a3b8; font-size: 18px; margin-bottom: 40px; }
+  .btn-back {
+    padding: 14px 48px; font-size: 16px; font-weight: 700;
+    border-radius: 14px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ===== Setup ===== -->
+<div id="setupScreen" class="setup-screen">
+  <div class="setup-header">
+    <div class="icon">🎤</div>
+    <h1>プレゼン ペースメーカー</h1>
+    <p>スライドの枚数と持ち時間を入力してください</p>
+  </div>
+  <div class="field">
+    <label>セミナー時間（分）</label>
+    <input type="number" id="inputMinutes" min="1" placeholder="">
+  </div>
+  <div class="field" style="margin-bottom:32px">
+    <label>スライド枚数</label>
+    <input type="number" id="inputSlides" min="1" placeholder="">
+  </div>
+  <div class="calc-box">
+    <div class="label">1スライドあたり</div>
+    <div class="value" id="calcPreview">---</div>
+  </div>
+  <button class="btn-start" id="btnStart" disabled>▶ スタート</button>
+</div>
+
+<!-- ===== Timer ===== -->
+<div id="timerScreen" class="timer-screen hidden">
+  <div class="progress-bar-top"><div class="fill" id="progressFill"></div></div>
+  <div class="timer-main" id="timerMain">
+    <div class="page-display">
+      <span class="page-label" id="pageLabelTop">いるべきページ&nbsp;</span>
+      <span class="page-num" id="pageNum">1</span>
+      <span class="page-total" id="pageTotal">&nbsp;/ 30</span>
+    </div>
+    <div class="countdown-wrap">
+      <div class="countdown-label" id="cdLabel">このページの残り</div>
+      <div class="countdown" id="countdownDisplay">00:00</div>
+    </div>
+    <div class="countdown-bar" id="countdownBar"><div class="fill" id="countdownFill"></div></div>
+  </div>
+  <div class="timer-bottom">
+    <div class="info-row">
+      <div class="info-item"><div class="lbl">経過</div><div class="val" id="elapsed">00:00</div></div>
+      <div class="info-item"><div class="lbl">残り</div><div class="val" id="remaining">00:00</div></div>
+      <div class="info-item"><div class="lbl">1枚</div><div class="val" id="perSlide">0秒</div></div>
+    </div>
+    <div class="controls">
+      <button class="btn-pause" id="btnPause">⏸ 停止</button>
+      <button class="btn-stop" id="btnStop">✕ 終了</button>
+    </div>
+  </div>
+  <div class="paused-overlay hidden" id="pausedIndicator">⏸ 一時停止中</div>
+</div>
+
+<!-- ===== Done ===== -->
+<div id="doneScreen" class="done-screen hidden">
+  <div class="icon">🎉</div>
+  <h1>お疲れさまでした！</h1>
+  <p id="doneSummary"></p>
+  <button class="btn-back" id="btnBack">最初に戻る</button>
+</div>
+
+<script>
+(function() {
+  const $ = id => document.getElementById(id);
+  const setupScreen = $('setupScreen'), timerScreen = $('timerScreen'), doneScreen = $('doneScreen');
+  const inputMin = $('inputMinutes'), inputSlides = $('inputSlides');
+  const calcPreview = $('calcPreview'), btnStart = $('btnStart');
+  const pageNum = $('pageNum'), pageTotal = $('pageTotal');
+  const countdownDisplay = $('countdownDisplay'), countdownFill = $('countdownFill');
+  const countdownBar = $('countdownBar');
+  const progressFill = $('progressFill');
+  const elapsedEl = $('elapsed'), remainingEl = $('remaining'), perSlideEl = $('perSlide');
+  const btnPause = $('btnPause'), btnStop = $('btnStop'), pausedInd = $('pausedIndicator');
+  const doneSummary = $('doneSummary'), btnBack = $('btnBack');
+  const timerMain = $('timerMain');
+  const pageLabelTop = $('pageLabelTop'), cdLabel = $('cdLabel');
+
+  let totalSecs = 0, slides = 0, secsPerSlide = 0;
+  let countdown = 0, currentPage = 1, totalElapsed = 0;
+  let isPaused = false, intervalId = null;
+
+  function show(el) { el.classList.remove('hidden'); }
+  function hide(el) { el.classList.add('hidden'); }
+
+  function fmt(s) {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  }
+  function fmtLong(s) {
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+    return fmt(s);
+  }
+
+  // Responsive sizing based on window
+  function applySize() {
+    if (timerScreen.classList.contains('hidden')) return;
+    const w = window.innerWidth, h = window.innerHeight;
+    const minDim = Math.min(w, h);
+    // Page number: scale between 48px and 140px
+    const pgSize = Math.max(48, Math.min(140, minDim * 0.35));
+    pageNum.style.fontSize = pgSize + 'px';
+    pageTotal.style.fontSize = Math.max(16, pgSize * 0.25) + 'px';
+    pageLabelTop.style.fontSize = Math.max(10, pgSize * 0.13) + 'px';
+    // Countdown
+    const cdSize = Math.max(28, Math.min(64, minDim * 0.16));
+    countdownDisplay.style.fontSize = cdSize + 'px';
+    cdLabel.style.fontSize = Math.max(9, cdSize * 0.22) + 'px';
+    // Countdown bar
+    countdownBar.style.height = Math.max(4, Math.min(10, minDim * 0.02)) + 'px';
+    countdownBar.style.marginTop = Math.max(4, minDim * 0.01) + 'px';
+  }
+  window.addEventListener('resize', applySize);
+
+  function updateCalc() {
+    const m = parseInt(inputMin.value) || 0;
+    const sl = parseInt(inputSlides.value) || 0;
+    if (m > 0 && sl > 0) {
+      const sps = Math.floor((m * 60) / sl);
+      calcPreview.textContent = sps + '秒（' + (sps / 60).toFixed(1) + '分）';
+      btnStart.disabled = false;
+    } else {
+      calcPreview.textContent = '---';
+      btnStart.disabled = true;
+    }
+  }
+  inputMin.addEventListener('input', updateCalc);
+  inputSlides.addEventListener('input', updateCalc);
+
+  function showSetup() {
+    clearInterval(intervalId);
+    hide(timerScreen); hide(doneScreen); show(setupScreen);
+    document.body.style.display = 'flex';
+  }
+
+  function renderTimer() {
+    const isLow = countdown <= 10;
+    countdownDisplay.textContent = fmt(countdown);
+    countdownDisplay.className = 'countdown' + (isLow ? ' low' : '');
+    const pct = secsPerSlide > 0 ? (countdown / secsPerSlide) * 100 : 0;
+    countdownFill.style.width = pct + '%';
+    countdownFill.className = 'fill' + (isLow ? ' low' : '');
+    progressFill.style.width = (totalElapsed / totalSecs * 100) + '%';
+    elapsedEl.textContent = fmtLong(totalElapsed);
+    remainingEl.textContent = fmtLong(totalSecs - totalElapsed);
+  }
+
+  function tick() {
+    totalElapsed++;
+    if (totalElapsed >= totalSecs) {
+      clearInterval(intervalId);
+      hide(timerScreen); show(doneScreen);
+      doneSummary.textContent = slides + '枚 / ' + Math.round(totalSecs / 60) + '分のプレゼン完了';
+      return;
+    }
+    countdown--;
+    if (countdown <= 0) {
+      currentPage++;
+      pageNum.textContent = currentPage;
+      countdown = secsPerSlide;
+      timerScreen.classList.add('flash');
+      pageNum.classList.add('flash-text');
+      setTimeout(() => { timerScreen.classList.remove('flash'); pageNum.classList.remove('flash-text'); }, 600);
+    }
+    renderTimer();
+  }
+
+  btnStart.addEventListener('click', () => {
+    const m = parseInt(inputMin.value) || 0;
+    const sl = parseInt(inputSlides.value) || 0;
+    if (m <= 0 || sl <= 0) return;
+    totalSecs = m * 60; slides = sl;
+    secsPerSlide = Math.floor(totalSecs / slides);
+    countdown = secsPerSlide; currentPage = 1; totalElapsed = 0; isPaused = false;
+    pageNum.textContent = '1';
+    pageTotal.textContent = '\u00a0/ ' + slides;
+    perSlideEl.textContent = secsPerSlide + '秒';
+    btnPause.textContent = '⏸ 停止';
+    btnPause.classList.remove('resumed');
+    hide(pausedInd);
+    hide(setupScreen); hide(doneScreen); show(timerScreen);
+    document.body.style.display = 'block';
+    applySize();
+    renderTimer();
+    intervalId = setInterval(tick, 1000);
+  });
+
+  btnPause.addEventListener('click', () => {
+    isPaused = !isPaused;
+    if (isPaused) {
+      clearInterval(intervalId);
+      btnPause.textContent = '▶ 再開';
+      btnPause.classList.add('resumed');
+      show(pausedInd);
+    } else {
+      intervalId = setInterval(tick, 1000);
+      btnPause.textContent = '⏸ 停止';
+      btnPause.classList.remove('resumed');
+      hide(pausedInd);
+    }
+  });
+
+  btnStop.addEventListener('click', showSetup);
+  btnBack.addEventListener('click', showSetup);
+})();
+</script>
+</body>
+</html>
